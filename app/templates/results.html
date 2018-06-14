@@ -1,0 +1,11 @@
+% extends "layout.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+<div class="container-fluid">
+    <h1>It will take you {{ result }} days to have one of your pets adopted!</h1>
+    <p>(95% confidence)</p>
+    <br>
+    <a href="{{ url_for('index') }}">Search another adoption agency</a>
+</div>
+{% endblock %}

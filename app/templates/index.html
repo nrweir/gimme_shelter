@@ -1,0 +1,12 @@
+% extends "layout.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+    <h1>Gimme Shelter</h1>
+    <p>Select your adoption agency from the menu below.</p>
+    <div class="row" style="margin-bottom: 10px;">
+        <div class="col-md-4">
+            {{ wtf.quick_form(form) }}
+        </div>
+    </div>
+{% endblock %}
