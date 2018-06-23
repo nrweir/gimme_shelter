@@ -1,13 +1,23 @@
 from app import app
 from app.forms import ShelterSelectForm
-import bs4 as BeautifulSoup
+from bs4 import BeautifulSoup
 import requests
-from flask import redirect, url_for, flash, render_template
+from flask import redirect, url_for, flash, render_template, jsonify
 from flask import request as flask_request
 from datetime import datetime
 import pandas as pd
 import numpy as np
 import re
+from bokeh.plotting import figure
+from bokeh.embed import components
+from bokeh.resources import INLINE
+from bokeh.models import ColumnDataSource, AjaxDataSource
+from bokeh.models import CustomJS, Slider, Select
+from bokeh.layouts import widgetbox, column
+
+resources = INLINE
+js_resources = resources.render_js()
+css_resources = resources.render_css()
 
 
 def flash_errors(form):
@@ -26,8 +36,8 @@ def index():
     """Load the home page."""
     shelter_form = ShelterSelectForm()
     if shelter_form.validate_on_submit():
-        return redirect(url_for('query_results'),
-                        shelter_id=shelter_form.shelter.data)
+        return redirect(url_for('query_results',
+                        shelter_id=shelter_form.shelter.data))
     return render_template('index.html', title='Search',
                            form=shelter_form)
 
@@ -37,6 +47,8 @@ def query_results():
     """Display results for the listing."""
     shelter_id = flask_request.args.get('shelter_id')
     pet_df = extract_pet_df(shelter_id)
+    if len(pet_df.index) == 0:
+        return render_template('results.html', has_dogs=False, result=0)
     cph_model = app.config['SURV_MODEL']
     survival_fxns = cph_model.predict_survival_function(
         pet_df, times=list(range(0, 750)))
@@ -50,8 +62,11 @@ def query_results():
         survival_fxns.loc[:, idx] = pet_func
     survival_mat = survival_fxns.as_matrix()
     p_persist = 1-np.prod(survival_mat, axis=1)
-    days_to_adopt = np.where(p_persist > 0.95)[0][0]
-    return render_template('results.html', title='Results',
+    try:
+        days_to_adopt = str(np.where(p_persist > 0.95)[0][0]) + ' days'
+    except:
+        days_to_adopt = 'over a year'
+    return render_template('results.html', title='Results', has_dogs=True,
                            result=days_to_adopt)
 
 
@@ -88,12 +103,12 @@ def count_words(description):
     return len(description.split(' '))
 
 
-def time_diff(row, present):
+def time_diff(lastupdate, present):
     """Measure time in days between a date in a pet_data row and `present`.
 
     This is a helper function for extract_pet_df.
     """
-    return (present - row['lastupdate']).days
+    return (present - lastupdate).days
 
 
 def extract_pet_df(shelter_id):
@@ -113,37 +128,38 @@ def extract_pet_df(shelter_id):
                    'size': pet.size.text,
                    'lastupdate': pet.lastupdate.text, 'n_photos': 0,
                    'noCats': 0, 'noDogs': 0, 'noKids': 0, 'specialNeeds': 0,
-                   'hasShots': 0, 'altered': 0}
+                   'hasShots': 0, 'altered': 0, 'housetrained':0}
         pet_row['n_photos'] = len(pet.find_all('photo'))
         pet_options = set(option.text for option in pet.find_all('option'))
-        option_cols = set('noCats', 'noDogs', 'noKids', 'specialNeeds',
-                          'hasShots', 'altered')
+        option_cols = set(['noCats', 'noDogs', 'noKids', 'specialNeeds',
+                          'hasShots', 'altered'])
         pet_options = list(pet_options.intersection(option_cols))
         for option in pet_options:
             pet_row[option] = 1
-        pet_data = pet_data.append(pet_row)
+        pet_data = pet_data.append(pet_row, ignore_index=True)
     # do some dtype conversion
     pet_data = pd.concat([pet_data, pd.get_dummies(pet_data['age']),
                           pd.get_dummies(pet_data['size'])], axis=1)
-    pet_data.loc[pet_data['mix'] == 'yes', 'mix'] = 1
-    pet_data.loc[pet_data['mix'] == 'no', 'mix'] = 0
+    pet_data.loc[pet_data['mix'] == 'yes', 'mix'] = '1'
+    pet_data.loc[pet_data['mix'] == 'no', 'mix'] = '0'
+    pet_data['mix'] = pd.to_numeric(pet_data['mix'])
     pet_data['description'] = pet_data['description'].fillna('')
     pet_data['desc_word_ct'] = pet_data['description'].apply(count_words)
     pet_data['lastupdate'].replace(re.compile('T.*'), '')
     pet_data['lastupdate'] = pd.to_datetime(pet_data['lastupdate'])
-    pet_data['listing_length'] = pet_data.apply(
-        time_diff, present=datetime.utcnow(), axis=1)
+    pet_data['listing_length'] = pet_data['lastupdate'].apply(
+        time_diff, present=datetime.utcnow())
     dummy_cols = ['S', 'M', 'XL', 'Young', 'Baby', 'Adult']
     for c in dummy_cols:
         if c not in pet_data.columns:
             pet_data[c] = 0
-    pet_data = pet_data.loc[pet_data['listing_length'] < 366, :]
     pet_data = pet_data.filter(
         items=['id', 'sex', 'mix', 'listing_length', 'n_photos', 'Baby',
                'Young', 'Adult', 'S', 'M', 'XL', 'noCats', 'noDogs', 'noKids',
                'specialNeeds', 'hasShots', 'altered', 'desc_word_ct',
                'housetrained'], axis=1)
     pet_data = pet_data.dropna()
-    pet_data = pet_data.apply(pd.to_numeric(axis=0))
-    pet_data = pet_data.loc[pet_data['listing_length'] < 366, :]
+    pet_data = pet_data.apply(pd.to_numeric, axis=0)
+    if len(pet_data.index) != 0:
+        pet_data = pet_data.loc[pet_data['listing_length'] < 366, :]
     return pet_data

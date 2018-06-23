@@ -1,11 +1,16 @@
-% extends "layout.html" %}
+{% extends "layout.html" %}
 {% import 'bootstrap/wtf.html' as wtf %}
 
 {% block app_content %}
 <div class="container-fluid">
-    <h1>It will take you {{ result }} days to have one of your pets adopted!</h1>
+    {% if has_dogs %}
+    <h1>Within {{ result }}, one of your dogs will have been adopted!</h1>
     <p>(95% confidence)</p>
     <br>
+    {% else %}
+    <h1>Go get some dogs to adopt!</h1>
+    <p>This application only works for dogs that were listed on petfinder.com within the past year.</p>
+    {% endif %}
     <a href="{{ url_for('index') }}">Search another adoption agency</a>
 </div>
 {% endblock %}

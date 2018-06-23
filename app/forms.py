@@ -6,6 +6,7 @@ from wtforms import TextAreaField, DateField, SelectField, FieldList, FormField
 from wtforms import Form, IntegerField, RadioField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
 from wtforms.validators import Length
+from operator import itemgetter
 
 
 class ShelterSelectForm(FlaskForm):
@@ -16,6 +17,7 @@ class ShelterSelectForm(FlaskForm):
         # adds them to validate.
         shelter_list = [(q.shelter_id, q.shelter_name) for q in
                         Shelter.query.all()]
+        shelter_list.sort(key=lambda x: str(x[1]))
         self.shelter.choices = shelter_list
     shelter = SelectField('Choose a shelter')
     submit = SubmitField('Predict adoption rates!')

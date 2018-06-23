@@ -17,7 +17,8 @@ class Config(object):
               'rb') as f:
         SURV_MODEL = pickle.load(f)
     f.close()
-
+    SEND_FILE_MAX_AGE_DEFAULT = 0
+    
     # S3 STORAGE #
     USE_S3 = os.environ.get('USE_S3') or 0
     S3_BUCKET = os.environ.get('S3_BUCKET') or None

@@ -15,3 +15,6 @@ migrate = Migrate(app, db)
 #sslify = SSLify(app)
 
 from app import views, models
+
+
+# To prevent caching files
