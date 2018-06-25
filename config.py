@@ -4,7 +4,7 @@ import pickle
 class Config(object):
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'vlad-the-impaler'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://nweir:Baseball87@localhost/shelters'  # TODO: UPDATE
+        'postgresql://nweir:Baseball87@localhost/gimmeshelter'  # TODO: UPDATE
     SQLALCHEMY_TRACK_NOTIFICATIONS = False
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)
@@ -18,7 +18,7 @@ class Config(object):
         SURV_MODEL = pickle.load(f)
     f.close()
     SEND_FILE_MAX_AGE_DEFAULT = 0
-    
+
     # S3 STORAGE #
     USE_S3 = os.environ.get('USE_S3') or 0
     S3_BUCKET = os.environ.get('S3_BUCKET') or None

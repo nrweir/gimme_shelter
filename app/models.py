@@ -52,13 +52,17 @@ class Dog(db.Model):
                 results are filtered by the tube range.
         """
         breed = filter_dict.pop('breed', None)  # pull out breed query
+        listing_state = filter_dict.pop('listing_state', None)
         query_result = Dog.query()
         # the following assumes that each dict value is a list
         for key, value in filter_dict.items():
-            for v in value:
+            query_result = query_result.filter(
+                *(getattr(Dog, key).ilike(value)))
+        if listing_state:
+            for s in listing_state:
                 query_result = query_result.filter(
-                    *(getattr(Dog, key).ilike(v)))
-        if breed is not None:  # do breed query from Breed
+                    Dog.listing_state.ilike(s))
+        if breed:  # do breed query from Breed
             breed_list = []
             for b in breed:
                 breed_list = breed_list + Breed.breed_to_ids(b)

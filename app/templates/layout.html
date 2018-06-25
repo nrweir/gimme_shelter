@@ -6,6 +6,11 @@
 {% endblock %}
 
 {% block content %}
+<head>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script type=text/javascript>$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};</script>
+</head>
+<body>
     <div class="container" style="padding-top: 40px;">
         <div class="span4"></div>
         <div class="span4">

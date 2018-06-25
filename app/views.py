@@ -32,15 +32,31 @@ def flash_errors(form):
             ), 'error')
 
 
-@app.route('/ajax', methods=['GET', 'POST'])
+@app.route('/_ajax', methods=['GET', 'POST'])
 def get_EDA_vals():
     """Get the x, y values for the desired filters and jsonify it.
 
     Use request.args to get filter terms.
     """
-    search_terms = request.form['filter_by']
-    search_terms = jwt.decode(search_terms, app.config['SECRET_KEY'],
-                              algorithms=['HS256'])
+    age = request.form['age']
+    breed = request.form['breed']
+    sex = request.form['sex']
+    n_photos = request.form['n_photos']
+    size = request.form['size']
+    altered = request.form['altered']
+    specialNeeds = request.form['specialNeeds']
+    noKids = request.form['noKids']
+    noCats = request.form['noCats']
+    noDogs = request.form['noDogs']
+    housetrained = request.form['housetrained']
+    listing_state = request.form['listing_state']
+    urban = request.form['urban']
+    search_terms = {'age': age, 'breed': breed, 'sex': sex,
+                    'n_photos': n_photos, 'size': size, 'altered': altered,
+                    'specialNeeds': specialNeeds, 'noKids': noKids,
+                    'noCats': noCats, 'noDogs': noDogs,
+                    'housetrained': housetrained,
+                    'listing_state': listing_state, 'urban': urban}
     record_df = Dog.filter_dict_to_records(search_terms)
     y_vals = get_adopt_fracs(record_df)
     return jsonify({'subset_vals': y_vals})
@@ -53,7 +69,7 @@ def index():
     # handle shelter selection form
     shelter_form = ShelterSelectForm()
     filter_form = EDAOptionsForm()
-    if shelter_form.validate_on_submit():
+    if shelter_form.submit.data:
         return redirect(url_for('query_results',
                         shelter_id=shelter_form.shelter.data))
     # handle EDA plot
