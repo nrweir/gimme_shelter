@@ -2,13 +2,23 @@
 {% import 'bootstrap/wtf.html' as wtf %}
 
 {% block app_content %}
+<script type='text/javascript' src="{{ url_for('static', filename='js/index.js') }}"></script>
+{{ js_resources | safe }}
+{{ css_resources | safe }}
+<noscript>Warning: Your browser does not support JavaScript. Some of the site's functionality will be missing.</noscript>
 <div class="container">
-    <p style="text-align: center;">Select your adoption agency from the menu below.</p>
     <div class="row" style="margin-bottom: 10px;">
-        <div class="col-md-4"></div>
         <div class="col-md-4">
-            {{ wtf.quick_form(form) }}
+            <p style="text-align: center;">Select your adoption agency from the menu below.</p>
+            {{ wtf.quick_form(shelter_form) }}
         </div>
-        <div class="col-md-4"></div>
+        <div class="col-md-1"></div>
+        <div class="col-md-7">
+            <p style="text-align: center;">Interactive visualization of adoption rates.</p>
+            {{ script | safe }}
+            {{ div | safe }}
+            {{ wtf.quick_form(filter_form) }}
+        </div>
     </div>
+</div>
 {% endblock %}

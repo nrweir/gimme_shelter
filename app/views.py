@@ -1,13 +1,15 @@
 from app import app
-from app.forms import ShelterSelectForm
+from app.forms import ShelterSelectForm, EDAOptionsForm
+from app.models import Dog
 from bs4 import BeautifulSoup
 import requests
 from flask import redirect, url_for, flash, render_template, jsonify
-from flask import request as flask_request
+from flask import request
 from datetime import datetime
 import pandas as pd
 import numpy as np
 import re
+import jwt
 from bokeh.plotting import figure
 from bokeh.embed import components
 from bokeh.resources import INLINE
@@ -30,22 +32,58 @@ def flash_errors(form):
             ), 'error')
 
 
+@app.route('/ajax', methods=['GET', 'POST'])
+def get_EDA_vals():
+    """Get the x, y values for the desired filters and jsonify it.
+
+    Use request.args to get filter terms.
+    """
+    search_terms = request.form['filter_by']
+    search_terms = jwt.decode(search_terms, app.config['SECRET_KEY'],
+                              algorithms=['HS256'])
+    record_df = Dog.filter_dict_to_records(search_terms)
+    y_vals = get_adopt_fracs(record_df)
+    return jsonify({'subset_vals': y_vals})
+
+
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/index', methods=['GET', 'POST'])
 def index():
-    """Load the home page."""
+    """Load the home page and relevant plots."""
+    # handle shelter selection form
     shelter_form = ShelterSelectForm()
+    filter_form = EDAOptionsForm()
     if shelter_form.validate_on_submit():
         return redirect(url_for('query_results',
                         shelter_id=shelter_form.shelter.data))
-    return render_template('index.html', title='Search',
-                           form=shelter_form)
+    # handle EDA plot
+    # hard-coding values for "total pet adoption rate" to minimize load time
+    t = [0, 1, 2, 3, 4, 5, 6, 7, 14, 21, 28, 45, 60, 90, 180, 365]
+    f_adopted = [0, 0.0975, 0.166, 0.233, 0.283, 0.331, 0.374, 0.414, 0.588,
+                 0.683, 0.748, 0.836, 0.877, 0.919, 0.964, 0.984]
+    source = ColumnDataSource(data=dict(x=t, y=f_adopted))
+    filtered_source = ColumnDataSource(data=dict(x=t, y=[0, 0, 0, 0, 0, 0, 0,
+                                                         0, 0, 0, 0, 0, 0, 0,
+                                                         0, 0]))
+    plot = figure(plot_width=300, plot_height=250)
+    plot.line('x', 'y',  line_width=3, source=source)
+    plot.line('x', 'y', line_width=3, line_color='red', source=filtered_source)
+
+    layout = column(plot)
+    script, div = components(layout, INLINE)
+    return render_template('index.html', title='Home',
+                           script=script,
+                           div=div,
+                           js_resources=INLINE.render_js(),
+                           css_resources=INLINE.render_css(),
+                           filter_form=filter_form,
+                           shelter_form=shelter_form)
 
 
 @app.route('/query_results', methods=['GET'])
 def query_results():
     """Display results for the listing."""
-    shelter_id = flask_request.args.get('shelter_id')
+    shelter_id = request.args.get('shelter_id')
     pet_df = extract_pet_df(shelter_id)
     if len(pet_df.index) == 0:
         return render_template('results.html', has_dogs=False, result=0)
@@ -163,3 +201,30 @@ def extract_pet_df(shelter_id):
     if len(pet_data.index) != 0:
         pet_data = pet_data.loc[pet_data['listing_length'] < 366, :]
     return pet_data
+
+
+def get_adopt_fracs(df):
+    """Get fraction adopted at set times for a pet_data df subset."""
+    adopted_frac = []
+    total_adopted = len(df)
+    for t in [1, 2, 3, 4, 5, 6, 7, 14, 21, 28, 45, 60, 90, 180, 365]:
+        adopted_frac.append(
+            round((df['listing_length'] <= t).sum()/total_adopted), 3)
+    return adopted_frac
+
+
+def mk_query(**kwargs):
+    """Generate the SQLAlchemy filter_by argument to search oligo db."""
+    return jwt.encode({key: _enc_value(value) for key, value in kwargs.items()
+                       if value is not None and value != ''},
+                      app.config['SECRET_KEY'],
+                      algorithm='HS256').decode('utf-8')
+
+
+def _enc_value(v):
+    if type(v) is str:
+        return "%"+v+"%"
+    elif type(v) is date:
+        return(str(v))
+    else:
+        return v
