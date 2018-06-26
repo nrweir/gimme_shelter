@@ -115,38 +115,37 @@ class EDAOptionsForm(FlaskForm):
         'Breed',
         choices=[(None, 'Any')] + list(zip(breed_list, breed_list)),
         default=[])
-    sex = SelectField('Sex', choices=[(None, 'Choose one'), ('0', 'Female'),
-                                      ('1', 'Male')])
+    sex = SelectField('Sex', choices=[(None, 'Choose one'), (0, 'Female'),
+                                      (1, 'Male')])
     n_photos = SelectField('Number of photos',
-                           choices=[(None, 'Choose one'), ('1', '0'),
-                                    ('2', '1'),
-                                    ('3', '2'), ('4', '3'), ('5', '4+')])
+                           choices=[(None, 'Choose one'), (1, '0'),
+                                    (2, '1'),
+                                    (3, '2'), (4, '3'), (5, '4+')])
     size = SelectField('Size',
                        choices=[(None, 'Choose one'), ('S', 'Small'),
                                 ('M', 'Medium'), ('L', 'Large'),
                                 ('XL', 'Extra Large')])
     altered = SelectField('Spayed/Neutered', choices=[(None, 'Choose one'),
-                                                      ('0', 'No'),
-                                                      ('1', 'Yes')])
-    specialNeeds = SelectField('Special Needs',
+                                                      (0, 'No'),
+                                                      (1, 'Yes')])
+    specialneeds = SelectField('Special Needs',
                                choices=[(None, 'Choose one'),
-                                        ('0', 'No'), ('1', 'Yes')])
-    noKids = SelectField('Kids OK?', choices=[(None, 'Choose one'),
-                                              ('1', 'No'), ('0', 'Yes')])
-    noDogs = SelectField('Other Dogs OK?', choices=[(None, 'Choose one'),
-                                                    ('1', 'No'), ('0', 'Yes')])
-    noCats = SelectField('Cats OK?', choices=[(None, 'Choose one'),
-                                              ('1', 'No'), ('0', 'Yes')])
+                                        (0, 'No'), (1, 'Yes')])
+    nokids = SelectField('Kids OK?', choices=[(None, 'Choose one'),
+                                              (1, 'No'), (0, 'Yes')])
+    nodogs = SelectField('Other Dogs OK?', choices=[(None, 'Choose one'),
+                                                    (1, 'No'), (0, 'Yes')])
+    nocats = SelectField('Cats OK?', choices=[(None, 'Choose one'),
+                                              (1, 'No'), (0, 'Yes')])
     housetrained = SelectField('Housetrained',
                                choices=[(None, 'Choose one'),
-                                        ('0', 'No'), ('1', 'Yes')])
+                                        (0, 'No'), (1, 'Yes')])
     listing_state = SelectMultipleField(
         'State listed in',
         choices=[(None, 'Any')] + list(zip(states, states)), default=[])
     urban = SelectField('Urban or Rural', choices=[(None, 'Choose one'),
-                                                   ('0', 'Rural'),
-                                                   ('1', 'Urban')])
-    submit_filter = SubmitField('Filter')
+                                                   (0, 'Rural'),
+                                                   (1, 'Urban')])
 
 
 class MultiCheckboxField(SelectMultipleField):

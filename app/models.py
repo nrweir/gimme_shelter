@@ -1,5 +1,5 @@
 from app import app, db, forms
-from sqlalchemy import or_, sql
+from sqlalchemy import sql, or_
 from datetime import datetime, date
 from time import time
 import jwt
@@ -21,22 +21,21 @@ class Dog(db.Model):
     """DB model for pet records."""
 
     pet_id = db.Column(db.Integer, primary_key=True)
-    age = db.Column(db.String(10), index=True)
-    sex = db.Column(db.Integer, index=True)
-    size = db.Column(db.String(4), index=True)
-    desc_word_ct = db.Column(db.Integer, index=True)
-    listing_length = db.Column(db.Integer, index=True)
-    n_photos = db.Column(db.Integer, index=True)
-    listing_state = db.Column(db.String(10), index=True)
-    urban = db.Column(db.Integer, index=True)
-    altered = db.Column(db.Integer, index=True)
-    noKids = db.Column(db.Integer, index=True)
-    noDogs = db.Column(db.Integer, index=True)
-    noCats = db.Column(db.Integer, index=True)
-    noKids = db.Column(db.Integer, index=True)
-    housetrained = db.Column(db.Integer, index=True)
-    hasShots = db.Column(db.Integer, index=True)
-    specialNeeds = db.Column(db.Integer, index=True)
+    age = db.Column(db.String(10))
+    sex = db.Column(db.Integer)
+    size = db.Column(db.String(4))
+    desc_word_ct = db.Column(db.Integer)
+    listing_length = db.Column(db.Integer)
+    n_photos = db.Column(db.Integer)
+    listing_state = db.Column(db.String(10))
+    urban = db.Column(db.Integer)
+    altered = db.Column(db.Integer)
+    nokids = db.Column(db.Integer)
+    nodogs = db.Column(db.Integer)
+    nocats = db.Column(db.Integer)
+    housetrained = db.Column(db.Integer)
+    hasshots = db.Column(db.Integer)
+    specialneeds = db.Column(db.Integer)
 
     def filter_dict_to_records(filter_dict):
         """Take a dictionary of column:search_term pairs and get records.
@@ -53,23 +52,19 @@ class Dog(db.Model):
         """
         breed = filter_dict.pop('breed', None)  # pull out breed query
         listing_state = filter_dict.pop('listing_state', None)
-        query_result = Dog.query()
-        # the following assumes that each dict value is a list
-        for key, value in filter_dict.items():
-            query_result = query_result.filter(
-                *(getattr(Dog, key).ilike(value)))
+        query_result = Dog.query.filter(
+            *(getattr(Dog, key) == value for (key, value)
+              in filter_dict.items()))
         if listing_state:
-            for s in listing_state:
-                query_result = query_result.filter(
-                    Dog.listing_state.ilike(s))
+            query_result = query_result.filter(
+                Dog.listing_state.in_(listing_state))
         if breed:  # do breed query from Breed
             breed_list = []
             for b in breed:
                 breed_list = breed_list + Breed.breed_to_ids(b)
-            breed_pets = Dog.query.filter(
-                    Dog.pet_id.in_(breed_list))
+            breed_pets = Dog.query.filter(Dog.pet_id.in_(breed_list))
             query_result = query_result.intersect(breed_pets)
-        return pd.read_sql(query_result.statement, query_result.session.bind)
+        return pd.read_sql(query_result.statement, db.engine)
 
 
 class Breed(db.Model):
