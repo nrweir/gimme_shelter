@@ -3,13 +3,19 @@
 
 {% block app_content %}
 <div class="container-fluid">
+
     {% if has_dogs %}
-    <h1>Within {{ result }}, one of your dogs will have been adopted!</h1>
-    <p>(95% confidence)</p>
-    <br>
+    <div class="row" style='padding-bottom: 10px;'>
+        <h1>{{ sname }}'s dog listings</h1>
+    </div>
+    {% for i in range(pet_names|length) %}
+        <p><span style="font-weight: bold;">{{ pet_names[i] }}</span> has been listed for <span style="font-weight: bold">{{ listing_len[i] }} days</span>, and will likely be adopted in  <span style="font-weight: bold; color:#800000">{{ adopt_preds[i] }} total.</span></p>
+        <br>
+    {% endfor %}
+    <p> How did we get these predictions? <a href="{{ url_for('about') }}">Click here for details.</a></p>
     {% else %}
     <h1>Go get some dogs to adopt!</h1>
-    <p>This application only works for dogs that were listed on petfinder.com within the past year.</p>
+    <p>This application only works for dogs that were listed on Petfinder.com within the past year.</p>
     {% endif %}
     <a href="{{ url_for('index') }}">Search another adoption agency</a>
 </div>

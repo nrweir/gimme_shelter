@@ -1,6 +1,6 @@
 from app import app, db
 from app.forms import ShelterSelectForm, EDAOptionsForm
-from app.models import Dog
+from app.models import Dog, Shelter
 from bs4 import BeautifulSoup
 import requests
 from io import StringIO
@@ -9,6 +9,7 @@ from flask import request
 from datetime import datetime
 import pandas as pd
 import numpy as np
+from urllib.parse import urlparse
 import os
 import pickle
 import re
@@ -133,51 +134,77 @@ def index():
                            shelter_form=shelter_form)
 
 
-@app.route('/query_results', methods=['GET'])
+@app.route('/query_results', methods=['GET', 'POST'])
 def query_results():
     """Display results for the listing."""
-    shelter_id = request.args.get('shelterName')
+    shelter_name = request.args.get('shelterName', None)
+    if shelter_name is None:
+        flash('The Shelter Name you entered was invalid. Please try another.')
+        return redirect(url_for('index'))
+    shelter = Shelter.query.filter_by(
+        shelter_name=shelter_name).first()
+    if shelter is None:
+        flash('The Shelter Name you entered was invalid. Please try another.')
+        return redirect(url_for('index'))
+    else:
+        shelter_id = shelter.shelter_id
     pet_df = extract_pet_df(shelter_id)
     if len(pet_df.index) == 0:
         return render_template('results.html', has_dogs=False, result=0)
-    with open(open_static('models/rf_model.pkl'), 'rb') as f:
+    with open(open_static('models/rf.pkl'), 'rb') as f:
         rf = pickle.load(f)
     f.close()
     pet_df['adopt_preds'] = rf.predict(
-        pet_df.drop(['listing_length', 'pet_name'], axis=1))
-    pet_df = pet_df.sort_values(by=['adopt_preds', 'listing_length',
+        pet_df.drop(['listing_length', 'pet_name'], axis=1).apply(
+            pd.to_numeric, axis=1))
+    pet_df = pet_df.sort_values(by=['listing_length', 'adopt_preds',
                                     'pet_name'])
-    pet_df.loc[pet_df['listing_length'] > 180] = 180
-    left_cutoff_dict = {0: 0, 1: 7, 2: 30, 3: 90}
-    right_cutoff_dict = {0: 7, 1: 30, 2: 90, 3: 180}
-    shelter_ds = ColumnDataSource(data=dict(
-        t_listed=pet_df['listing_length'],
-        left_cutoff=[left_cutoff_dict[k] for k in pet_df['adopt_preds']],
-        right_cutoff=[right_cutoff_dict[k] for k in pet_df['adopt_preds']],
-        y=[list(range(1, len(pet_df) + 1)).reverse()]))
-    # Plot for shelter results
-    shelter_plt = figure(plot_width=500, plot_height=500,
-                         x_axis_label="Time (days)",
-                         y_axis_label="Dog name")
-    cutoff_1 = Span(location=7, dimension='height', line_color='black',
-                    line_dash='dashed', line_width=1)
-    cutoff_2 = Span(location=30, dimension='height', line_color='black',
-                    line_dash='dashed', line_width=1)
-    cutoff_3 = Span(location=90, dimension='height', line_color='black',
-                    line_dash='dashed', line_width=1)
-    shelter_plt.add_layout(cutoff_1)
-    shelter_plt.add_layout(cutoff_2)
-    shelter_plt.add_layout(cutoff_3)
-    shelter_plt.xgrid.grid_line_color = None
-    shelter_plt.ygrid.grid_line_color = None
-    listed_time = HBar(y='y', left=0, right='t_listed', height=0.6,
-                       fill_color='#6d1509', fill_alpha=0.9)
-    pred_range = HBar(y='y', left='left_cutoff', right='right_cutoff',
-                      fill_color='black', fill_alpha=0.25, height=0.75)
-    shelter_plt.add_glyph(shelter_ds, listed_time)
-    shelter_plt.add_glyph(shelter_ds, pred_range)
+    # pet_df.loc[pet_df['listing_length'] > 180] = 180
+    # left_cutoff_dict = {0: 0, 1: 7, 2: 30, 3: 90}
+    # right_cutoff_dict = {0: 7, 1: 30, 2: 90, 3: 180}
+    # shelter_ds = ColumnDataSource(data=dict(
+    #     t_listed=pet_df['listing_length'],
+    #     left_cutoff=[left_cutoff_dict[k] for k in pet_df['adopt_preds']],
+    #     right_cutoff=[right_cutoff_dict[k] for k in pet_df['adopt_preds']],
+    #     y=[list(range(1, len(pet_df) + 1)).reverse()]))
+    # # Plot for shelter results
+    # shelter_plt = figure(plot_width=500, plot_height=500,
+    #                      x_axis_label="Time (days)",
+    #                      y_axis_label="Dog name")
+    # cutoff_1 = Span(location=7, dimension='height', line_color='black',
+    #                 line_dash='dashed', line_width=1)
+    # cutoff_2 = Span(location=30, dimension='height', line_color='black',
+    #                 line_dash='dashed', line_width=1)
+    # cutoff_3 = Span(location=90, dimension='height', line_color='black',
+    #                 line_dash='dashed', line_width=1)
+    # shelter_plt.add_layout(cutoff_1)
+    # shelter_plt.add_layout(cutoff_2)
+    # shelter_plt.add_layout(cutoff_3)
+    # shelter_plt.xgrid.grid_line_color = None
+    # shelter_plt.ygrid.grid_line_color = None
+    # listed_time = HBar(y='y', left=0, right='t_listed', height=0.6,
+    #                    fill_color='#6d1509', fill_alpha=0.9)
+    # pred_range = HBar(y='y', left='left_cutoff', right='right_cutoff',
+    #                   fill_color='black', fill_alpha=0.25, height=0.75)
+    # shelter_plt.add_glyph(shelter_ds, listed_time)
+    # shelter_plt.add_glyph(shelter_ds, pred_range)
+    adopt_preds = []
+    pred_dict = {0: 'under a week',
+                 1: 'one week to one month',
+                 2: 'one to three months',
+                 3: 'over three months'}
+    for i in pet_df['adopt_preds']:
+        adopt_preds.append(pred_dict[i])
     return render_template('results.html', title='Results', has_dogs=True,
-                           result=days_to_adopt)
+                           pet_names=pet_df['pet_name'].tolist(),
+                           sname=shelter_name,
+                           listing_len=pet_df['listing_length'].tolist(),
+                           adopt_preds=adopt_preds)
+
+
+@app.route('/about', methods=['GET'])
+def about():
+    return render_template('about.html', title='About this project')
 
 
 def get_response_text(shelter_id):
@@ -245,7 +272,9 @@ def add_state_region_urban(shelter_df):
 
 def encode_bows(df, cv):
     bow = cv.transform(df['description']).todense()
-    df = pd.concat([df, bow], axis=1)
+    bow_df = pd.DataFrame(bow, index=df.id, columns=cv.get_feature_names())
+    bow_df['id'] = bow_df.index.astype('str')
+    df = df.join(bow_df, how='left', on='id', rsuffix="_bow")
     return df
 
 
@@ -268,7 +297,8 @@ def extract_pet_df(shelter_id):
     for pet in pets:
         if pet.animal.text != 'Dog':
             continue
-        pet_row = {'id': pet.id.text, 'zip': pet.zip.text, 'age': pet.age.text,
+        pet_row = {'id': pet.id.text, 'pet_name': pet.pet_name.text,
+                   'zip': pet.zip.text, 'age': pet.age.text,
                    'mix': pet.mix.text, 'description': pet.description.text,
                    'size': pet.size.text,
                    'lastupdate': pet.lastupdate.text, 'n_photos': 0,
@@ -287,7 +317,9 @@ def extract_pet_df(shelter_id):
                         ).replace(' ', '_').replace('/', '') in breed_list:
                     pet_row[
                         b.text.lower().replace(' ', '_').replace('/', '')] = 1
-        pet_row['n_photos'] = len(pet.find_all('photo'))
+        photo_url_list = [''.join(urlparse(url.text)[1:3]) for url in
+                          pet.photos.find_all()]
+        pet_row['n_photos'] = len(list(set(photo_url_list)))
         pet_options = set(option.text for option in pet.find_all('option'))
         option_cols = set(['noCats', 'noDogs', 'noKids', 'specialNeeds',
                           'hasShots', 'altered'])
@@ -296,41 +328,47 @@ def extract_pet_df(shelter_id):
             pet_row[option] = 1
         pet_data = pet_data.append(pet_row, ignore_index=True)
     # do some dtype conversion
-    pet_data = pd.concat([pet_data, pd.get_dummies(pet_data['age']),
-                          pd.get_dummies(pet_data['size'])], axis=1)
-    pet_data.loc[pet_data['mix'] == 'yes', 'mix'] = '1'
-    pet_data.loc[pet_data['mix'] == 'no', 'mix'] = '0'
-    pet_data['mix'] = pd.to_numeric(pet_data['mix'])
-    pet_data['description'] = pet_data['description'].fillna('')
-    pet_data['desc_word_ct'] = pet_data['description'].apply(count_words)
-    pet_data['lastupdate'].replace(re.compile('T.*'), '')
-    pet_data['lastupdate'] = pd.to_datetime(pet_data['lastupdate'])
-    pet_data['listing_length'] = pet_data['lastupdate'].apply(
-        time_diff, present=datetime.utcnow())
-    dummy_cols = ['S', 'M', 'L', 'XL', 'Young', 'Baby', 'Adult', 'Senior']
-    for c in dummy_cols:
-        if c not in pet_data.columns:
-            pet_data[c] = 0
-    with open(open_static('data/interaction_set.pkl'), 'rb') as f:
-        interaction_list = pickle.load(f)
-    f.close()
-    for i in interaction_list:
-        pet_data['_x_'.join(i)] = pet_data[i[0]]*pet_data[i[1]]
-    pet_data = pet_data.filter(
-        items=['id', 'sex', 'mix', 'listing_length', 'n_photos', 'Baby',
-               'Young', 'Adult', 'S', 'M', 'XL', 'noCats', 'noDogs', 'noKids',
-               'specialNeeds', 'hasShots', 'altered', 'desc_word_ct',
-               'housetrained'], axis=1)
-    pet_data['desc_word_ct'] = pet_data['desc_word_ct']/1773
-    pet_data['n_photos'] = pet_data['n_photos']/6
-    pet_data = pet_data.dropna()
-    with open(open_static('models/cv.pkl'), 'rb') as f:
-        cv = pickle.load(f)
-    f.close()
-    pet_data = encode_bows(pet_data, cv)
-    pet_data = pet_data.apply(pd.to_numeric, axis=0)
+    if len(pet_data) > 0:
+        pet_data = pd.concat([pet_data, pd.get_dummies(pet_data['age']),
+                              pd.get_dummies(pet_data['size'])], axis=1)
+        pet_data.loc[pet_data['mix'] == 'yes', 'mix'] = '1'
+        pet_data.loc[pet_data['mix'] == 'no', 'mix'] = '0'
+        pet_data['mix'] = pd.to_numeric(pet_data['mix'])
+        pet_data['description'] = pet_data['description'].fillna('')
+        pet_data['desc_word_ct'] = pet_data['description'].apply(count_words)
+        pet_data['lastupdate'].replace(re.compile('T.*'), '')
+        pet_data['lastupdate'] = pd.to_datetime(pet_data['lastupdate'])
+        pet_data['listing_length'] = pet_data['lastupdate'].apply(
+            time_diff, present=datetime.utcnow())
+        with open(open_static('data/features.pkl'), 'rb') as f:
+            feature_set = pickle.load(f)
+        f.close()
+        current_cols = pet_data.columns
+        for c in feature_set:
+            if c not in current_cols:
+                pet_data[c] = 0
+        with open(open_static('data/interaction_set.pkl'), 'rb') as f:
+            interaction_list = pickle.load(f)
+        f.close()
+
+        for i in interaction_list:
+            if i[0] not in pet_data.columns:
+                pet_data[i[0]] = 0
+            if i[1] not in pet_data.columns:
+                pet_data[i[1]] = 0
+            pet_data['_x_'.join(i)] = pet_data[i[0]]*pet_data[i[1]]
+        pet_data['desc_word_ct'] = pet_data['desc_word_ct']/1773
+        pet_data['n_photos'] = pet_data['n_photos']/6
+        pet_data = pet_data.dropna()
+        with open(open_static('models/cv.pkl'), 'rb') as f:
+            cv = pickle.load(f)
+        f.close()
+        pet_data = encode_bows(pet_data, cv)
     if len(pet_data.index) != 0:
         pet_data = pet_data.loc[pet_data['listing_length'] < 366, :]
+        pet_data = pet_data[
+            ['listing_length', 'pet_name'] + feature_set +
+            cv.get_feature_names()]
     return pet_data
 
 

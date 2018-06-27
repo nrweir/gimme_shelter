@@ -4,7 +4,7 @@ import pickle
 class Config(object):
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'vlad-the-impaler'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://nweir:Baseball87@localhost/gimmeshelter'  # TODO: UPDATE
+        'postgresql://nweir:insight_nweir_shelter@gimmeshelterdb.coilshyw3blh.us-east-2.rds.amazonaws.com/gimmeshelter'  # TODO: UPDATE
     SQLALCHEMY_TRACK_NOTIFICATIONS = False
     ADMINS = ['nicholas.r.weir@gmail.com']  # TODO: UPDATE
     MAX_CONTENT_LENGTH = 25*1024*1024  # limit max upload size to 25 mb
