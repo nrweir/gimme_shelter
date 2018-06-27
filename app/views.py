@@ -14,8 +14,11 @@ import os
 import pickle
 import re
 import jwt
+from bokeh.core.properties import value
 from bokeh.plotting import figure
 from bokeh.embed import components
+from bokeh.palettes import Spectral6
+from bokeh.transform import dodge
 from bokeh.resources import INLINE
 from bokeh.models import ColumnDataSource, CustomJS, Span
 from bokeh.models.glyphs import HBar
@@ -87,11 +90,10 @@ def index():
 
     # handle EDA plot
     # hard-coding values for "total pet adoption rate" to minimize load time
-    t = [0, 1, 2, 3, 4, 5, 6, 7, 14, 21, 28, 45, 60, 90, 180, 365]
-    f_adopted = [0, 0.0975, 0.166, 0.233, 0.283, 0.331, 0.374, 0.414, 0.588,
-                 0.683, 0.748, 0.836, 0.877, 0.919, 0.964, 0.984]
-    static_source = ColumnDataSource(data=dict(x=t, y=f_adopted))
-    source = ColumnDataSource(data=dict(x=[], y=[]))
+    data = {'x': ["0-7 days", "7-30 days", "31-90 days", ">90 days"],
+            'All dogs': [41.4391, 34.8107, 15.6709, 4.4533],
+            'Filtered': [0, 0, 0, 0]}
+    source = ColumnDataSource(data=data)
     callback = CustomJS(args=dict(source=source), code="""
                 $.ajax({
                     url: '/_ajax',
@@ -101,8 +103,7 @@ def index():
                         console.log(response);
                         var response_data = response;
                         var data = source.data;
-                        data['x'] = [0, 1, 2, 3, 4, 5, 6, 7, 14, 21, 28, 45, 60, 90, 180, 365];
-                        data['y'] = response_data['y_vals'];
+                        data['Filtered'] = response_data['y_vals'];
                         source.change.emit();
                     },
                     error: function(error) {
@@ -112,16 +113,28 @@ def index():
                         """)
     # EDA plot
     btn = Button(label='Filter', callback=callback)
-    plot = figure(plot_width=500, plot_height=300,
-                  x_axis_label="Time to adoption (days)",
-                  y_axis_label="Fraction of dogs adopted")
+    plot = figure(x_range=data['x'], plot_width=500, plot_height=300,
+                  x_axis_label='Time to adoption',
+                  y_axis_label='Percentage of dogs')
+    plot.legend.location = "top_right"
+    plot.y_range.start = 0
+    plot.y_range.end = 100
+    plot.x_range.range_padding = 0.1
+    plot.xaxis.major_label_orientation = 1
     plot.xgrid.grid_line_color = None
     plot.ygrid.grid_line_color = None
-    plot.line('x', 'y',  line_width=3, source=static_source,
-              line_color='black', legend="All Dogs")
-    plot.line('x', 'y', line_width=3, line_color='red', source=source,
-              legend="Filtered Results")
-    plot.legend.location = "bottom_right"
+    plot.vbar(x=dodge('x', -0.22, range=plot.x_range), top='All dogs',
+              width=0.4, source=source, color="#2c4368",
+              legend=value("All dogs"))
+
+    plot.vbar(x=dodge('x',  0.22,  range=plot.x_range), top='Filtered',
+              width=0.4, source=source, color="#540c14",
+              legend=value("Filtered"))
+              #fill_color=factor_cmap('x', palette=Spectral6, factors=grp,
+                                     #start=1, end=2))
+    # plot.line('x', 'y', line_width=3, line_color='red', source=source,
+    #           legend="Filtered Results")
+    plot.legend.location = "top_right"
 
     layout = column(plot, btn)
     script, div = components(layout, INLINE)
@@ -374,12 +387,9 @@ def extract_pet_df(shelter_id):
 
 def get_adopt_fracs(df):
     """Get fraction adopted at set times for a pet_data df subset."""
-    adopted_frac = [0]
     total_adopted = len(df)
-    tpts = [1, 2, 3, 4, 5, 6, 7, 14, 21, 28, 45, 60, 90, 180, 365]
-    for t in tpts:
-        adopted_frac.append(
-            round((df['listing_length'] <= t).sum()/total_adopted, 3))
+    adopted_frac = df['multi_output'].value_counts()/total_adopted
+    adopted_frac = list(adopted_frac*100)
     return adopted_frac
 
 

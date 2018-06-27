@@ -36,6 +36,7 @@ class Dog(db.Model):
     housetrained = db.Column(db.Integer)
     hasshots = db.Column(db.Integer)
     specialneeds = db.Column(db.Integer)
+    multi_output = db.Column(db.Integer)
 
     def filter_dict_to_records(filter_dict):
         """Take a dictionary of column:search_term pairs and get records.
