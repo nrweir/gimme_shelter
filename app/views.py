@@ -168,15 +168,15 @@ def query_results():
         rf = pickle.load(f)
     f.close()
     pet_df['adopt_preds'] = rf.predict(
-        pet_df.drop(['listing_length', 'pet_name'], axis=1).apply(
+        pet_df.drop(['pet_name'], axis=1).apply(
             pd.to_numeric, axis=1))
-    pet_df = pet_df.sort_values(by=['listing_length', 'adopt_preds',
+    pet_df = pet_df.sort_values(by=['duration', 'adopt_preds',
                                     'pet_name'])
-    # pet_df.loc[pet_df['listing_length'] > 180] = 180
+    # pet_df.loc[pet_df['duration'] > 180] = 180
     # left_cutoff_dict = {0: 0, 1: 7, 2: 30, 3: 90}
     # right_cutoff_dict = {0: 7, 1: 30, 2: 90, 3: 180}
     # shelter_ds = ColumnDataSource(data=dict(
-    #     t_listed=pet_df['listing_length'],
+    #     t_listed=pet_df['duration'],
     #     left_cutoff=[left_cutoff_dict[k] for k in pet_df['adopt_preds']],
     #     right_cutoff=[right_cutoff_dict[k] for k in pet_df['adopt_preds']],
     #     y=[list(range(1, len(pet_df) + 1)).reverse()]))
@@ -211,7 +211,7 @@ def query_results():
     return render_template('results.html', title='Results', has_dogs=True,
                            pet_names=pet_df['pet_name'].tolist(),
                            sname=shelter_name,
-                           listing_len=pet_df['listing_length'].tolist(),
+                           listing_len=pet_df['duration'].tolist(),
                            adopt_preds=adopt_preds)
 
 
@@ -330,13 +330,17 @@ def extract_pet_df(shelter_id):
                         ).replace(' ', '_').replace('/', '') in breed_list:
                     pet_row[
                         b.text.lower().replace(' ', '_').replace('/', '')] = 1
-        photo_url_list = [''.join(urlparse(url.text)[1:3]) for url in
-                          pet.photos.find_all()]
-        pet_row['n_photos'] = len(list(set(photo_url_list)))
+        if pet.photos:
+            photo_url_list = [''.join(urlparse(url.text)[1:3]) for url in
+                              pet.photos.find_all()]
+            pet_row['n_photos'] = len(list(set(photo_url_list)))
+        else:
+            pet_row['n_photos'] = 0
         pet_options = set(option.text for option in pet.find_all('option'))
         option_cols = set(['noCats', 'noDogs', 'noKids', 'specialNeeds',
                           'hasShots', 'altered'])
         pet_options = list(pet_options.intersection(option_cols))
+
         for option in pet_options:
             pet_row[option] = 1
         pet_data = pet_data.append(pet_row, ignore_index=True)
@@ -351,7 +355,7 @@ def extract_pet_df(shelter_id):
         pet_data['desc_word_ct'] = pet_data['description'].apply(count_words)
         pet_data['lastupdate'].replace(re.compile('T.*'), '')
         pet_data['lastupdate'] = pd.to_datetime(pet_data['lastupdate'])
-        pet_data['listing_length'] = pet_data['lastupdate'].apply(
+        pet_data['duration'] = pet_data['lastupdate'].apply(
             time_diff, present=datetime.utcnow())
         with open(open_static('data/features.pkl'), 'rb') as f:
             feature_set = pickle.load(f)
@@ -378,9 +382,9 @@ def extract_pet_df(shelter_id):
         f.close()
         pet_data = encode_bows(pet_data, cv)
     if len(pet_data.index) != 0:
-        pet_data = pet_data.loc[pet_data['listing_length'] < 366, :]
+        pet_data = pet_data.loc[pet_data['duration'] < 366, :]
         pet_data = pet_data[
-            ['listing_length', 'pet_name'] + feature_set +
+            ['pet_name'] + feature_set +
             cv.get_feature_names()]
     return pet_data
 
@@ -388,8 +392,13 @@ def extract_pet_df(shelter_id):
 def get_adopt_fracs(df):
     """Get fraction adopted at set times for a pet_data df subset."""
     total_adopted = len(df)
-    adopted_frac = df['multi_output'].value_counts()/total_adopted
-    adopted_frac = list(adopted_frac*100)
+    out_col = df['multi_output']
+    zeros = (out_col == 0).sum()
+    ones = (out_col == 1).sum()
+    twos = (out_col == 2).sum()
+    threes = (out_col == 3).sum()
+    adopted_frac = [100*zeros/total_adopted, 100*ones/total_adopted,
+                    100*twos/total_adopted, 100*threes/total_adopted]
     return adopted_frac
 
 
