@@ -51,7 +51,7 @@ def get_EDA_vals():
     Use request.args to get filter terms.
     """
     age = request.args.get('age', None)
-    breed = request.args.get('breed', None)
+    breed = request.args.getlist('breed', None)
     sex = request.args.get('sex', None)
     n_photos = request.args.get('n_photos', None)
     size = request.args.get('size', None)
@@ -61,19 +61,22 @@ def get_EDA_vals():
     nocats = request.args.get('nocats', None)
     nodogs = request.args.get('nodogs', None)
     housetrained = request.args.get('housetrained', None)
-    listing_state = request.args.get('listing_state', None)
+    listing_state = request.args.getlist('listing_state', None)
     urban = request.args.get('urban', None)
     search_terms = {'age': age, 'breed': breed, 'sex': sex,
                     'n_photos': n_photos, 'size': size, 'altered': altered,
                     'specialneeds': specialneeds, 'nokids': nokids,
-                    'nocats': nocats, 'noDogs': nodogs,
+                    'nocats': nocats, 'nodogs': nodogs,
                     'housetrained': housetrained,
                     'listing_state': listing_state, 'urban': urban}
     search_terms = {k: v for (k, v) in search_terms.items() if v != 'None'}
     search_terms = {k: v for (k, v) in search_terms.items() if v is not None}
     record_df = Dog.filter_dict_to_records(search_terms)
-    y_vals = get_adopt_fracs(record_df)
-    return jsonify(y_vals=y_vals)
+    if len(record_df) == 0:
+        y_vals = [0, 0, 0, 0]
+    else:
+        y_vals = get_adopt_fracs(record_df)
+    return jsonify(y_vals=y_vals, n_records=len(record_df))
     # return jsonify(record_df)
 
 
@@ -101,11 +104,13 @@ def index():
                     type: 'GET',
                     success: function(response) {
                         console.log(response);
-                        var response_data = response;
-                        var data = source.data;
-                        data['Filtered'] = response_data['y_vals'];
-                        source.change.emit();
-                    },
+                    var response_data = response;
+                    var data = source.data;
+                    data['Filtered'] = response_data['y_vals'];
+                    source.change.emit();
+                    var resultCount = "Your query returned " +  response_data['n_records'].toString() + " results.";
+                    document.getElementById("n_results").innerHTML =   resultCount;
+},
                     error: function(error) {
                         console.log(error);
                     }
@@ -170,6 +175,7 @@ def query_results():
     pet_df['adopt_preds'] = rf.predict(
         pet_df.drop(['pet_name'], axis=1).apply(
             pd.to_numeric, axis=1))
+    print(pet_df)
     pet_df = pet_df.sort_values(by=['duration', 'adopt_preds',
                                     'pet_name'])
     # pet_df.loc[pet_df['duration'] > 180] = 180

@@ -51,20 +51,21 @@ class Dog(db.Model):
                 all other filters are applied first, and then the
                 results are filtered by the tube range.
         """
+        print(filter_dict)
         breed = filter_dict.pop('breed', None)  # pull out breed query
         listing_state = filter_dict.pop('listing_state', None)
         query_result = Dog.query.filter(
             *(getattr(Dog, key) == value for (key, value)
               in filter_dict.items()))
-        if listing_state:
+        if listing_state != []:
             query_result = query_result.filter(
                 Dog.listing_state.in_(listing_state))
-        if breed:  # do breed query from Breed
+        if breed != []:  # do breed query from Breed
             breed_list = []
             for b in breed:
                 breed_list = breed_list + Breed.breed_to_ids(b)
-            breed_pets = Dog.query.filter(Dog.pet_id.in_(breed_list))
-            query_result = query_result.intersect(breed_pets)
+            query_result = query_result.filter(Dog.pet_id.in_(breed_list))
+            print("number of results: {}".format(len(query_result.all())))
         return pd.read_sql(query_result.statement, db.engine)
 
 
