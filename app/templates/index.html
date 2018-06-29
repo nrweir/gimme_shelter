@@ -5,8 +5,6 @@
 <script type='text/javascript' src="{{ url_for('static', filename='js/index.js') }}"></script>
 <!--<script type='text/javascript' src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>-->
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/autocomplete.css') }}">
-{{ js_resources | safe }}
-{{ css_resources | safe }}
 <noscript>Warning: Your browser does not support JavaScript. Some of the site's functionality will be missing.</noscript>
 <div class="container-fluid">
     <h2 style="color: #540c14">Predict dog adoption time by agency</h2>
@@ -24,91 +22,6 @@
                 <input class='form-control' type="submit">
                 <span style="font-style: italic;">Note: may be slow for agencies with many listings.</span>
             </form>
-        </div>
-    </div>
-</div>
-<div class="container-fluid">
-    <h2 style="color: #540c14">Explore the data</h2>
-    <div class="row">
-        <h4 style="color: #2c4368; font-weight: bold;">Instructions:</span></h4>
-        <p>
-            Select the options that you'd like to filter by and click <span style="font-weight: bold;">Filter</span> under the graph. The full dataset comprises 42,000 adopted dogs.
-        </p>
-    </div>
-    <div class="row">
-        <div class="col-sm-6">
-            <form class="form-horizontal" id="filter_form">
-                <div class="row" style="padding-bottom: 20px">
-                    <div class="col-sm-6">
-                        {{ filter_form.age.label }}
-                        {{ filter_form.age(class="form-control") }}
-                    </div>
-                    <div class="col-sm-6">
-                        {{ filter_form.sex.label }}
-                        {{ filter_form.sex(class="form-control") }}
-                    </div>
-                </div>
-                <div class="row" style="padding-bottom: 20px">
-                    <div class="col-sm-6">
-                        {{ filter_form.size.label }}
-                        {{ filter_form.size(class="form-control") }}
-                    </div>
-                    <div class="col-sm-6">
-                        {{ filter_form.n_photos.label }}
-                        {{ filter_form.n_photos(class="form-control") }}
-                    </div>
-                </div>
-                <div class="row" style="padding-bottom: 20px">
-                    <p style="font-style: italic;">For the following two fields, you may select multiple values by holding Ctrl (PC) or Cmd (Mac).</p>
-                    <div class="col-sm-6">
-                        {{ filter_form.breed.label }}
-                        {{ filter_form.breed(class="form-control") }}
-                    </div>
-                    <div class="col-sm-6">
-                        {{ filter_form.listing_state.label }}
-                        {{ filter_form.listing_state(class="form-control") }}
-                    </div>
-                </div>
-                <div class="row" style="padding-bottom: 20px">
-                    <div class="col-sm-6">
-                        {{ filter_form.urban.label }}
-                        {{ filter_form.urban(class="form-control") }}
-                    </div>
-                    <div class="col-sm-6">
-                        {{ filter_form.housetrained.label }}
-                        {{ filter_form.housetrained(class="form-control") }}
-                    </div>
-                </div>
-                <div class="row" style="padding-bottom: 20px">
-                    <div class="col-sm-6">
-                        {{ filter_form.altered.label }}
-                        {{ filter_form.altered(class="form-control") }}
-                    </div>
-                    <div class="col-sm-6">
-                        {{ filter_form.specialneeds.label }}
-                        {{ filter_form.housetrained(class="form-control") }}
-                    </div>
-                </div>
-                <div class="row" style="padding-bottom: 20px">
-                    <div class="col-sm-4">
-                        {{ filter_form.nokids.label }}
-                        {{ filter_form.nokids(class="form-control") }}
-                    </div>
-                    <div class="col-sm-4">
-                        {{ filter_form.nodogs.label }}
-                        {{ filter_form.nodogs(class="form-control") }}
-                    </div>
-                    <div class="col-sm-4">
-                        {{ filter_form.nocats.label }}
-                        {{ filter_form.nocats(class="form-control") }}
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="col-sm-6">
-            {{ script | safe }}
-            {{ div | safe }}
-            <p id="n_results"></p>
         </div>
     </div>
 </div>

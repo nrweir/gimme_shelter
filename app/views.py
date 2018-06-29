@@ -87,6 +87,13 @@ def index():
     """Load the home page and relevant plots."""
     # handle shelter selection form
     shelter_form = ShelterSelectForm()
+
+    return render_template('index.html', title='Home',
+                           shelter_form=shelter_form)
+
+
+@app.route('/explore', methods=['GET','POST'])
+def explore():
     filter_form = EDAOptionsForm()
     # if shelter_form.submit.data:
     #     return redirect(url_for('query_results',
@@ -111,7 +118,7 @@ def index():
                     source.change.emit();
                     var resultCount = "Your query returned " +  response_data['n_records'].toString() + " results.";
                     document.getElementById("n_results").innerHTML =   resultCount;
-},
+    },
                     error: function(error) {
                         console.log(error);
                     }
@@ -136,21 +143,15 @@ def index():
     plot.vbar(x=dodge('x',  0.22,  range=plot.x_range), top='Filtered',
               width=0.4, source=source, color="#540c14",
               legend=value("Filtered"))
-              #fill_color=factor_cmap('x', palette=Spectral6, factors=grp,
-                                     #start=1, end=2))
-    # plot.line('x', 'y', line_width=3, line_color='red', source=source,
-    #           legend="Filtered Results")
     plot.legend.location = "top_right"
 
     layout = column(plot, btn, sizing_mode='scale_width')
     script, div = components(layout, INLINE)
-    return render_template('index.html', title='Home',
-                           script=script,
-                           div=div,
+    return render_template('explore.html', title='Explore',
+                           script=script, div=div,
                            js_resources=INLINE.render_js(),
                            css_resources=INLINE.render_css(),
-                           filter_form=filter_form,
-                           shelter_form=shelter_form)
+                           filter_form=filter_form,)
 
 
 @app.route('/query_results', methods=['GET', 'POST'])
