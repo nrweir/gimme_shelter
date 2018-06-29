@@ -141,7 +141,7 @@ class EDAOptionsForm(FlaskForm):
                                choices=[(None, 'Choose one'),
                                         (0, 'No'), (1, 'Yes')])
     listing_state = SelectMultipleField(
-        'State listed in',
+        'Listing State',
         choices=[(None, 'Any')] + list(zip(states, states)), default=[])
     urban = SelectField('Urban or Rural', choices=[(None, 'Choose one'),
                                                    (0, 'Rural'),

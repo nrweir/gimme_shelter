@@ -142,7 +142,7 @@ def index():
     #           legend="Filtered Results")
     plot.legend.location = "top_right"
 
-    layout = column(plot, btn)
+    layout = column(plot, btn, sizing_mode='scale_width')
     script, div = components(layout, INLINE)
     return render_template('index.html', title='Home',
                            script=script,
