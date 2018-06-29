@@ -1,11 +1,13 @@
 from app import app, db, forms
 from sqlalchemy import sql, or_
 from datetime import datetime, date
+from sqlalchemy.orm import relationship
 from time import time
 import jwt
 from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
 import re
+from time import time
 
 
 class Shelter(db.Model):
@@ -15,7 +17,6 @@ class Shelter(db.Model):
     shelter_id = db.Column(db.String(10), index=True)
     shelter_name = db.Column(db.String(100))
     zip_code = db.Column(db.String(6))
-
 
 class Dog(db.Model):
     """DB model for pet records."""
@@ -52,7 +53,7 @@ class Dog(db.Model):
                 results are filtered by the tube range.
         """
         print(filter_dict)
-        breed = filter_dict.pop('breed', None)  # pull out breed query
+        breeds = filter_dict.pop('breed', None)  # pull out breed query
         listing_state = filter_dict.pop('listing_state', None)
         query_result = Dog.query.filter(
             *(getattr(Dog, key) == value for (key, value)
@@ -60,13 +61,10 @@ class Dog(db.Model):
         if listing_state != []:
             query_result = query_result.filter(
                 Dog.listing_state.in_(listing_state))
-        if breed != []:  # do breed query from Breed
-            breed_list = []
-            for b in breed:
-                breed_list = breed_list + Breed.breed_to_ids(b)
-            query_result = query_result.filter(Dog.pet_id.in_(breed_list))
-            print("number of results: {}".format(len(query_result.all())))
-        return pd.read_sql(query_result.statement, db.engine)
+        if breeds != []:  # do breed query from Breed
+            query_result = query_result.join(Breed).filter(
+                Breed.breed.in_(breeds))
+        return pd.read_sql(query_result.statement, query_result.session.bind)
 
 
 class Breed(db.Model):
@@ -75,9 +73,13 @@ class Breed(db.Model):
     ref_id = db.Column(db.Integer, primary_key=True)
     pet_id = db.Column(db.Integer, db.ForeignKey('dog.pet_id'), index=True)
     breed = db.Column(db.String(50), index=True)
+    dog = relationship('Dog', back_populates="breeds")
 
     def breed_to_ids(breed):
         """Return the list of pet IDs corresponding to a given breed."""
         q = Breed.query.filter_by(breed=breed)
         rel_records = pd.read_sql(q.statement, q.session.bind)
         return rel_records['pet_id'].tolist()
+
+
+Dog.breeds = relationship('Breed', order_by=Breed.ref_id, back_populates='dog')

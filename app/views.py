@@ -72,6 +72,7 @@ def get_EDA_vals():
     search_terms = {k: v for (k, v) in search_terms.items() if v != 'None'}
     search_terms = {k: v for (k, v) in search_terms.items() if v is not None}
     record_df = Dog.filter_dict_to_records(search_terms)
+    print("Number of records: {}".format(len(record_df)))
     if len(record_df) == 0:
         y_vals = [0, 0, 0, 0]
     else:
