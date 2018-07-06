@@ -250,7 +250,7 @@ def get_pet_list(response_text):
 
 def make_shelter_query(shelter_id):
     """Generate the HTTP request for the petfinder API."""
-    return 'http://api.petfinder.com/shelter.getPets?key=6ef799f2dba15f2989a49a109052918d&id=' + shelter_id + '&count=600&output=full'
+    return 'http://api.petfinder.com/shelter.getPets?key=' + app.config['PETFINDER_KEY'] + '&id=' + shelter_id + '&count=600&output=full'
 
 
 def count_words(description):

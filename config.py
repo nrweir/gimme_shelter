@@ -9,6 +9,7 @@ class Config(object):
     ADMINS = ['nicholas.r.weir@gmail.com']  # TODO: UPDATE
     MAX_CONTENT_LENGTH = 25*1024*1024  # limit max upload size to 25 mb
     SITE_ROOT = os.path.realpath(os.path.dirname(__file__)) + '/app'
+    PETFINDER_KEY = os.environ.get('PETFINDER_KEY')
 
     # S3 STORAGE #
     USE_S3 = os.environ.get('USE_S3') or 0
