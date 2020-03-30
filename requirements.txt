@@ -7,7 +7,7 @@ awsebcli==3.14.1
 backcall==0.1.0
 backports-abc==0.5
 beautifulsoup4==4.6.0
-bleach==1.5.0
+bleach==3.1.4
 blessed==1.15.0
 bokeh==0.13.0
 botocore==1.10.45
